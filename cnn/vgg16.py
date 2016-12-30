@@ -82,7 +82,7 @@ class Vgg16():
         model.load_weights(get_file(fname, self.FILE_PATH+fname, cache_subdir='models'))
 
 
-    def get_batches(self, path, gen=image.ImageDataGenerator(), shuffle=True, batch_size=8, class_mode='categorical'):
+    def get_batches(self, path, gen=image.ImageDataGenerator(horizontal_flip=True, width_shift_range=0.1, height_shift_range=0.1), shuffle=True, batch_size=8, class_mode='categorical'):
         return gen.flow_from_directory(path, target_size=(224,224),
                 class_mode=class_mode, shuffle=shuffle, batch_size=batch_size)
 
@@ -94,12 +94,12 @@ class Vgg16():
         model.add(Dense(num, activation='softmax'))
         self.compile()
 
-    def finetune(self, batches):
+    def finetune(self, batches, lr):
         model = self.model
         model.pop()
         for layer in model.layers: layer.trainable=False
         model.add(Dense(batches.nb_class, activation='softmax'))
-        self.compile()
+        self.compile(lr)
 
 
     def compile(self, lr=0.001):
