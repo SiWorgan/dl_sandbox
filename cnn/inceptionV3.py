@@ -18,6 +18,7 @@ from keras.optimizers import SGD, RMSprop, Adam
 from keras.preprocessing import image
 from keras.applications import InceptionV3
 from keras.models import Model
+from keras.callbacks import EarlyStopping, History
 
 
 class IncepV3():
@@ -37,30 +38,36 @@ class IncepV3():
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
         x = Dense(1024, activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
         predictions = Dense(n_class, activation='softmax')(x)
         self.model = Model(input=base_model.input, output=predictions)
 
 
-    def get_batches(self, path, gen=image.ImageDataGenerator(horizontal_flip=True, width_shift_range=0.1, height_shift_range=0.1), shuffle=True, batch_size=8, class_mode='categorical'):
+    def get_batches(self, path, gen=image.ImageDataGenerator(shear_range=0.2,
+        zoom_range=0.1,
+        rotation_range=10.,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        horizontal_flip=True), shuffle=True, batch_size=8, class_mode='categorical'):
         return gen.flow_from_directory(path, target_size=(299,299),
                 class_mode=class_mode, shuffle=shuffle, batch_size=batch_size)
 
     def finetune(self, batches, lr):
-        for layer in self.base_model.layers:
-            layer.trainable = False
+        for layer in self.model.layers[:172]:
+           layer.trainable = False
+        for layer in self.model.layers[172:]:
+           layer.trainable = True
         self.compile(lr)
 
     def compile(self, lr=0.001):
         self.model.compile(optimizer=Adam(lr=lr),
                 loss='categorical_crossentropy', metrics=['accuracy'])
 
-    def fit_data(self, trn, labels,  val, val_labels,  nb_epoch=1, batch_size=64):
-        self.model.fit(trn, labels, nb_epoch=nb_epoch,
-                validation_data=(val, val_labels), batch_size=batch_size)
-
     def fit(self, batches, val_batches, nb_epoch=1):
+        callbacks = [EarlyStopping(monitor='val_loss', patience=1, verbose=0)]
         self.model.fit_generator(batches, samples_per_epoch=batches.nb_sample, nb_epoch=nb_epoch,
-                validation_data=val_batches, nb_val_samples=val_batches.nb_sample)
+                validation_data=val_batches, nb_val_samples=val_batches.nb_sample, callbacks=callbacks)
 
 
     def test(self, path, batch_size=8):
