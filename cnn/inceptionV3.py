@@ -14,6 +14,7 @@ from keras.models import Sequential
 from keras.layers.core import Flatten, Dense, Dropout, Lambda
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 from keras.layers.pooling import GlobalAveragePooling2D
+from keras.layers import Input
 from keras.optimizers import SGD, RMSprop, Adam
 from keras.preprocessing import image
 from keras.applications import InceptionV3
@@ -34,7 +35,7 @@ class IncepV3():
         return np.array(preds), idxs, classes
 
     def create(self, n_class):
-        self.base_model = base_model = InceptionV3(weights='imagenet', include_top=False)
+        self.base_model = base_model = InceptionV3(weights='imagenet', include_top=False, input_tensor=Input(shape=(3, 360, 640)))
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
         x = Dense(1024, activation='relu')(x)
@@ -50,7 +51,7 @@ class IncepV3():
         width_shift_range=0.2,
         height_shift_range=0.2,
         horizontal_flip=True), shuffle=True, batch_size=8, class_mode='categorical'):
-        return gen.flow_from_directory(path, target_size=(299,299),
+        return gen.flow_from_directory(path, target_size=(360,640),
                 class_mode=class_mode, shuffle=shuffle, batch_size=batch_size)
 
     def finetune(self, batches, lr):
