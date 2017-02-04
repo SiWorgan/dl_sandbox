@@ -11,7 +11,7 @@ from keras import backend as K
 from keras.layers.normalization import BatchNormalization
 from keras.utils.data_utils import get_file
 from keras.models import Sequential
-from keras.layers.core import Flatten, Dense, Dropout, Lambda
+from keras.layers.core import Flatten, Dense, Dropout, Lambda, Activation
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 from keras.layers.pooling import GlobalAveragePooling2D
 from keras.layers import Input
@@ -35,13 +35,29 @@ class IncepV3():
         return np.array(preds), idxs, classes
 
     def create(self, n_class):
+        nf = 128
+        p = 0
         self.base_model = base_model = InceptionV3(weights='imagenet', include_top=False, input_tensor=Input(shape=(3, 360, 640)))
         x = base_model.output
+        x = BatchNormalization(axis=1)(x)
+        x = Convolution2D(nf,3,3, activation='relu', border_mode='same')(x)
+        x = BatchNormalization(axis=1)(x)
+        x = MaxPooling2D()(x)
+        x = Convolution2D(nf,3,3, activation='relu', border_mode='same')(x)
+        x = BatchNormalization(axis=1)(x)
+        x = MaxPooling2D()(x)
+        x = Convolution2D(nf,3,3, activation='relu', border_mode='same')(x)
+        x = BatchNormalization(axis=1)(x)
+        x = MaxPooling2D((1,2))(x)
+        x = Convolution2D(8,3,3, border_mode='same')(x)
+        x = Dropout(p)(x)
         x = GlobalAveragePooling2D()(x)
-        x = Dense(1024, activation='relu')(x)
-        x = BatchNormalization()(x)
-        x = Dropout(0.3)(x)
-        predictions = Dense(n_class, activation='softmax')(x)
+        predictions= Activation('softmax')(x)
+        #x = GlobalAveragePooling2D()(x)
+        #x = Dense(1024, activation='relu')(x)
+        #x = BatchNormalization()(x)
+        #x = Dropout(0.3)(x)
+        #predictions = Dense(n_class, activation='softmax')(x)
         self.model = Model(input=base_model.input, output=predictions)
 
 
