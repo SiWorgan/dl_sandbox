@@ -10,4 +10,6 @@ language_translation/data/small_vocab_fr
 *.zip
 *.meta
 *.index
+*.jpg
+*.jpeg
 MNIST_data
